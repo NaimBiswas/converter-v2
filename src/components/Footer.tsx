@@ -47,7 +47,7 @@ export const Footer: React.FC = () => {
             {/* Social Links */}
             <div className="flex items-center gap-3 pt-2">
               <a
-                href="https://github.com"
+                href="https://github.com/NaimBiswas/converter-v2"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="GitHub Repository"
