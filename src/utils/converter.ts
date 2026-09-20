@@ -362,6 +362,8 @@ export async function convertSingleFile(
  * HEIC/HEIF Conversion — decodes via heic2any (libheif compiled to WASM, loaded
  * on demand) since browsers other than Safari can't decode HEIC natively, then
  * reuses the existing canvas/PDF pipelines for the actual target encoding.
+ * Multi-image HEIC containers (burst photos / Live Photos) only convert the
+ * first frame; the rest are discarded.
  */
 async function convertHeicImage(
   file: File,
@@ -487,8 +489,14 @@ async function convertImageToPdf(
   const arrayBuffer = await file.arrayBuffer();
   const pdfDoc = await PDFDocument.create();
 
+  // Sniff the actual magic bytes rather than trusting file.type/extension,
+  // since a mislabeled or renamed image (or an inconsistent canvas.toBlob
+  // encode) would otherwise crash embedJpg with an opaque "SOI not found".
+  const header = new Uint8Array(arrayBuffer.slice(0, 3));
+  const isJpeg = header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff;
+
   let image;
-  if (file.type === 'image/jpeg' || file.type === 'image/jpg') {
+  if (isJpeg) {
     image = await pdfDoc.embedJpg(arrayBuffer);
   } else {
     // Default or PNG
@@ -630,14 +638,16 @@ async function buildDocx(text: string, title: string): Promise<Blob> {
  * gets replaced instead.
  */
 function sanitizeForStandardFont(text: string): string {
-  return text.replace(/[^\t\n\r\x20-\x7E\xA0-\xFF]/g, '?');
+  // WinAnsi (used by pdf-lib's standard fonts) cannot encode tabs, so expand
+  // them to spaces before the general allow-list filter runs.
+  return text.replace(/\t/g, '    ').replace(/[^\n\r\x20-\x7E\xA0-\xFF]/g, '?');
 }
 
 /**
  * Builds a real, openable multi-page PDF from plain text via pdf-lib,
  * wrapping lines to the page width.
  */
-async function buildTextPdf(text: string, title: string): Promise<Uint8Array> {
+export async function buildTextPdf(text: string, title: string): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontSize = 11;

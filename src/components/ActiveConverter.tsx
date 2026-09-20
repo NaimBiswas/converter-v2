@@ -21,7 +21,7 @@ export const ActiveConverter: React.FC<ActiveConverterProps> = ({
   onAddMore,
   onClearAll,
 }) => {
-  const [previewContent, setPreviewContent] = useState<{ name: string; content: string; isImage?: boolean; url?: string } | null>(null);
+  const [previewContent, setPreviewContent] = useState<{ name: string; content: string; isImage?: boolean; isPdf?: boolean; url?: string } | null>(null);
 
   if (files.length === 0) return null;
 
@@ -94,7 +94,9 @@ export const ActiveConverter: React.FC<ActiveConverterProps> = ({
                 {/* File Thumbnail & Meta */}
                 <div className="flex items-center gap-4 min-w-0 flex-1">
                   <div className="w-12 h-12 rounded-xl bg-[#f3f4f5] dark:bg-[#1e293b] flex items-center justify-center shrink-0 text-[#0058be] dark:text-[#38bdf8]">
-                    {item.type.startsWith('image/') ? (
+                    {item.extension === 'heic' || item.extension === 'heif' ? (
+                      <span className="material-symbols-outlined text-2xl">photo_camera</span>
+                    ) : item.type.startsWith('image/') ? (
                       item.previewUrl ? (
                         <img
                           src={item.previewUrl}
@@ -164,14 +166,25 @@ export const ActiveConverter: React.FC<ActiveConverterProps> = ({
                     {/* View Preview Button if Converted Text/Image available */}
                     {isDone && (item.convertedContentText || item.convertedUrl) && (
                       <button
-                        onClick={() =>
+                        onClick={async () => {
+                          const isImage = /\.(jpe?g|png|webp|gif)$/i.test(item.convertedName || '');
+                          let isPdf = false;
+                          if (!isImage && /\.pdf$/i.test(item.convertedName || '') && item.convertedBlob) {
+                            try {
+                              const head = await item.convertedBlob.slice(0, 5).text();
+                              isPdf = head === '%PDF-';
+                            } catch {
+                              isPdf = false;
+                            }
+                          }
                           setPreviewContent({
                             name: item.convertedName || item.name,
                             content: item.convertedContentText || '',
-                            isImage: item.type.startsWith('image/'),
+                            isImage,
+                            isPdf,
                             url: item.convertedUrl
-                          })
-                        }
+                          });
+                        }}
                         className="p-2 text-[#0058be] dark:text-[#38bdf8] hover:bg-[#d8e2ff]/50 dark:hover:bg-[#1e293b] rounded-lg transition-colors cursor-pointer"
                         title="Quick Preview"
                       >
@@ -285,6 +298,12 @@ export const ActiveConverter: React.FC<ActiveConverterProps> = ({
                     className="max-h-[50vh] object-contain rounded-lg border border-[#e1e3e4] dark:border-[#334155]"
                   />
                 </div>
+              ) : previewContent.isPdf && previewContent.url ? (
+                <embed
+                  src={previewContent.url}
+                  type="application/pdf"
+                  className="w-full h-[60vh] rounded-lg border border-[#e1e3e4] dark:border-[#334155]"
+                />
               ) : (
                 <pre className="whitespace-pre-wrap">{previewContent.content}</pre>
               )}
