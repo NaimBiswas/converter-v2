@@ -29,7 +29,7 @@ const NotFoundPage = lazy(() => import('./components/pages/NotFoundPage').then((
 
 import { POPULAR_TOOLS } from './data/tools';
 import { ConversionTool, UploadedFileItem } from './types';
-import { convertSingleFile, getAvailableTargetFormats } from './utils/converter';
+import { convertSingleFile, getAvailableTargetFormats, buildTextPdf } from './utils/converter';
 import * as XLSX from 'xlsx';
 
 function ScrollToTop() {
@@ -100,7 +100,7 @@ export default function App() {
       const target = available[0] || 'PDF';
 
       let previewUrl: string | undefined;
-      if (file.type.startsWith('image/')) {
+      if (file.type.startsWith('image/') && ext !== 'heic' && ext !== 'heif') {
         previewUrl = URL.createObjectURL(file);
       }
 
@@ -276,15 +276,10 @@ export default function App() {
       filename = 'token.txt';
       content = 'SGVsbG8gRGF0YSBDb252ZXJ0ZXIh';
       type = 'text/plain';
-    } else if (tool.fromFormat === 'PDF' || tool.toFormat === 'PDF') {
-      filename = 'sample_document.pdf';
-      content = 'Sample PDF document content for Data Converter transformation.';
-      type = 'application/pdf';
-    } else if (tool.fromFormat === 'JSON') {
-      filename = 'data_export.json';
-      content = JSON.stringify([{ id: 1, name: 'Alice', role: 'Engineer' }], null, 2);
-      type = 'application/json';
-    } else if (tool.category === 'images') {
+    } else if (
+      tool.category === 'images' ||
+      ['Image', 'JPG', 'PNG', 'WebP', 'HEIC'].includes(tool.fromFormat)
+    ) {
       filename = `sample_photo.jpg`;
       const canvas = document.createElement('canvas');
       canvas.width = 300;
@@ -304,6 +299,20 @@ export default function App() {
         }
       });
       return;
+    } else if (tool.fromFormat === 'PDF') {
+      filename = 'sample_document.pdf';
+      buildTextPdf(
+        `Sample PDF document for previewing the "${tool.title}" conversion tool.\n\nData Converter - https://metadataconverter.com`,
+        'Sample Document'
+      ).then((pdfBytes) => {
+        const sampleFile = new File([pdfBytes], filename, { type: 'application/pdf' });
+        handleFilesAdded([sampleFile]);
+      });
+      return;
+    } else if (tool.fromFormat === 'JSON') {
+      filename = 'data_export.json';
+      content = JSON.stringify([{ id: 1, name: 'Alice', role: 'Engineer' }], null, 2);
+      type = 'application/json';
     }
 
     const blob = new Blob([content], { type });
