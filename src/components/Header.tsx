@@ -92,15 +92,8 @@ export const Header: React.FC<HeaderProps> = ({
             </span>
           </button>
 
-          <button
-            onClick={onOpenAuthModal}
-            className="bg-[#0058be] dark:bg-[#0284c7] text-white text-xs font-bold px-5 py-2.5 rounded-full hover:bg-[#2170e4] dark:hover:bg-[#0369a1] active:scale-95 transition-all shadow-sm cursor-pointer"
-          >
-            Get Started
-          </button>
         </div>
       </div>
     </header>
   );
 };
-
