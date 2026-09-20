@@ -166,11 +166,15 @@ export default function App() {
     }, stepInterval);
 
     try {
-      const result = await convertSingleFile(item, (p) => {
-        setFiles((prev) =>
-          prev.map((f) => (f.id === id ? { ...f, progress: Math.max(currentProgress, p) } : f))
-        );
-      });
+      const result = await convertSingleFile(
+        item,
+        (p) => {
+          setFiles((prev) =>
+            prev.map((f) => (f.id === id ? { ...f, progress: Math.max(currentProgress, p) } : f))
+          );
+        },
+        files
+      );
 
       clearInterval(progressTimer);
 
@@ -197,7 +201,16 @@ export default function App() {
         )
       );
 
-      showToast(`Successfully converted ${item.name} to ${item.targetFormat}!`);
+      if (item.targetFormat.toUpperCase() === 'MERGE' && item.extension.toLowerCase() === 'pdf') {
+        const pdfCount = files.filter((f) => f.extension.toLowerCase() === 'pdf').length;
+        showToast(
+          pdfCount > 1
+            ? `Merged ${pdfCount} PDF files into one document!`
+            : `Successfully converted ${item.name} to ${item.targetFormat}!`
+        );
+      } else {
+        showToast(`Successfully converted ${item.name} to ${item.targetFormat}!`);
+      }
     } catch (err: any) {
       clearInterval(progressTimer);
       setFiles((prev) =>
